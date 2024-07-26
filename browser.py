@@ -2,7 +2,7 @@ from url import URL
 
 def show(body: str) -> None:
     in_tag = False
-    for c in body:
+    for i, c in enumerate(body):
         if c == "<":
             in_tag = True
         elif c == ">":

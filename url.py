@@ -1,21 +1,35 @@
+import sys
 import socket
 import ssl
 
 
 class URL:
     def __init__(self, url: str) -> None:
-        self.scheme, url = url.split("://", 1)
-        assert self.scheme in ["http", "https", "file"]
+        if "://" in url:
+            self.scheme, url = url.split("://", 1)
+            assert self.scheme in ["http", "https", "file"]
 
-        if self.scheme == "http":
-            self.port = 80
-            self._parse_http_url(url)
-        elif self.scheme == "https":
-            self.port = 443
-            self._parse_http_url(url)
-        elif self.scheme == "file":
-            self._parse_file_url(url)
+            if self.scheme == "http":
+                self.port = 80
+                self._parse_http_url(url)
+            elif self.scheme == "https":
+                self.port = 443
+                self._parse_http_url(url)
+            elif self.scheme == "file":
+                self._parse_file_url(url)
+        elif ":" in url:
+            self.scheme, url = url.split(":", 1)
+            if self.scheme == "data":
+                self._parse_data_url(url)
 
+
+    def _parse_data_url(self, input_url: str) -> None:
+        url_type, _ = input_url.split(",", 1)
+        if url_type != "text/html":
+            print(f"Unsupported data url type: {url_type}")
+            exit()
+
+        self.host = " ".join(sys.argv[1:])
 
     def _parse_file_url(self, input_url: str) -> None:
         self.host = input_url
@@ -31,14 +45,19 @@ class URL:
             self.host, port = self.host.split(":", 1)
             self.port = int(port)
 
-    def request_file(self) -> str:
+    def _request_data(self) -> str:
+        return self.host
+
+    def _request_file(self) -> str:
         with open(self.host) as f:
             lines = "".join(f.readlines())
         return lines
 
     def request(self, extra_headers: dict[str, str]={}) -> str:
         if self.scheme == "file":
-            return self.request_file()
+            return self._request_file()
+        elif self.scheme == "data":
+            return self._request_data()
 
         s = socket.socket(
             family=socket.AF_INET,
