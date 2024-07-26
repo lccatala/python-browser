@@ -23,7 +23,7 @@ class URL:
             self.host, port = self.host.split(":", 1)
             self.port = int(port)
 
-    def request(self) -> str:
+    def request(self, extra_headers: dict[str, str]={}) -> str:
         s = socket.socket(
             family=socket.AF_INET,
             type=socket.SOCK_STREAM,
@@ -34,8 +34,12 @@ class URL:
             s = ctx.wrap_socket(s, server_hostname=self.host)
         s.connect((self.host, self.port))
 
-        request =  f"GET {self.path} HTTP/1.0\r\n"
+        request =  f"GET {self.path} HTTP/1.1\r\n"
         request += f"Host: {self.host}\r\n"
+        request +=  "Connection: close\r\n"
+        request +=  "User-Agent: lccatala\r\n"
+        for h, v in extra_headers:
+            request +=  f"{h}: {v}\r\n"
         request +=  "\r\n"
         s.send(request.encode("utf8"))
 
