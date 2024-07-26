@@ -17,4 +17,9 @@ def load(url: URL) -> None:
 
 if __name__ == "__main__":
     import sys
-    load(URL(sys.argv[1]))
+
+    start_url = "file://start.html"
+    if len(sys.argv) >= 2:
+        start_url = sys.argv[1]
+
+    load(URL(start_url))

@@ -5,25 +5,41 @@ import ssl
 class URL:
     def __init__(self, url: str) -> None:
         self.scheme, url = url.split("://", 1)
-        assert self.scheme in ["http", "https"]
+        assert self.scheme in ["http", "https", "file"]
 
         if self.scheme == "http":
             self.port = 80
+            self._parse_http_url(url)
         elif self.scheme == "https":
             self.port = 443
+            self._parse_http_url(url)
+        elif self.scheme == "file":
+            self._parse_file_url(url)
 
 
-        if "/" not in url:
-            url = url + "/"
+    def _parse_file_url(self, input_url: str) -> None:
+        self.host = input_url
 
-        self.host, url = url.split("/", 1)
-        self.path = "/" + url # The slash is part of the path
+    def _parse_http_url(self, input_url: str) -> None:
+        if "/" not in input_url:
+            input_url = input_url + "/"
+
+        self.host, input_url = input_url.split("/", 1)
+        self.path = "/" + input_url # The slash is part of the path
 
         if ":" in self.host:
             self.host, port = self.host.split(":", 1)
             self.port = int(port)
 
+    def request_file(self) -> str:
+        with open(self.host) as f:
+            lines = "".join(f.readlines())
+        return lines
+
     def request(self, extra_headers: dict[str, str]={}) -> str:
+        if self.scheme == "file":
+            return self.request_file()
+
         s = socket.socket(
             family=socket.AF_INET,
             type=socket.SOCK_STREAM,
