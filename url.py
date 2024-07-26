@@ -12,11 +12,16 @@ class URL:
         elif self.scheme == "https":
             self.port = 443
 
+
         if "/" not in url:
             url = url + "/"
 
         self.host, url = url.split("/", 1)
         self.path = "/" + url # The slash is part of the path
+
+        if ":" in self.host:
+            self.host, port = self.host.split(":", 1)
+            self.port = int(port)
 
     def request(self) -> str:
         s = socket.socket(
