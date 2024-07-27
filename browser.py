@@ -6,7 +6,7 @@ def load(url: URL) -> None:
     body = url.request()
     renderer = PageRenderer(body)
     view_source = url.scheme_prefix == "view-source"
-    renderer.show(view_source=view_source)
+    # renderer.show(view_source=view_source)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import sys
 import socket
 import ssl
+import gzip
 
 
 class URL:
@@ -90,27 +91,24 @@ class URL:
         request += f"Host: {self.host}\r\n"
         # request +=  "Connection: close\r\n"
         request +=  "User-Agent: lccatala\r\n"
+        # request +=  "Accept-Encoding: gzip"
         for h, v in extra_headers:
             request +=  f"{h}: {v}\r\n"
         request +=  "\r\n"
         self._socket.send(request.encode("utf8"))
 
-        response = self._socket.makefile("r", encoding="utf8", newline="\r\n")
-        statusline = response.readline()
+        response = self._socket.makefile("rb", encoding="utf8", newline="\r\n")
+        statusline = str(response.readline(), encoding="utf-8")
         version, status, explanation = statusline.split(" ", 2)
 
         response_headers: dict[str, str] = {}
         while True:
-            line = response.readline()
+            line = str(response.readline(), encoding="utf-8")
             if line == "\r\n":
                 break
 
             header, value = line.split(":", 1)
             response_headers[header.casefold()] = value.strip()
-        print(response_headers)
-
-        assert "transfer-encoding" not in response_headers
-        assert "content-encoding" not in response_headers
 
         # Handle redirect
         if int(status) > 299 and int(status) < 400:
@@ -122,7 +120,12 @@ class URL:
             return url.request()
 
         content_length = int(response_headers["content-length"])
-        content = response.read(content_length)
 
-        return content
+        content = response.read(content_length)
+        ch = "content-encoding"
+        if ch in response_headers and response_headers[ch] == "gzip":
+            print("decompress")
+            content = gzip.decompress(response.read(content_length))
+
+        return str(content, encoding="utf-8")
 
