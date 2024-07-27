@@ -79,11 +79,12 @@ class URL:
                 type=socket.SOCK_STREAM,
                 proto=socket.IPPROTO_TCP
             )
+
             if self.scheme == "https":
                 ctx = ssl.create_default_context()
                 self._socket = ctx.wrap_socket(self._socket, server_hostname=self.host)
 
-            self._socket.connect((self.host, self.port))
+        self._socket.connect((self.host, self.port))
 
         request =  f"GET {self.path} HTTP/1.1\r\n"
         request += f"Host: {self.host}\r\n"
@@ -98,7 +99,7 @@ class URL:
         statusline = response.readline()
         version, status, explanation = statusline.split(" ", 2)
 
-        response_headers = {}
+        response_headers: dict[str, str] = {}
         while True:
             line = response.readline()
             if line == "\r\n":
@@ -106,10 +107,19 @@ class URL:
 
             header, value = line.split(":", 1)
             response_headers[header.casefold()] = value.strip()
-
+        print(response_headers)
 
         assert "transfer-encoding" not in response_headers
         assert "content-encoding" not in response_headers
+
+        # Handle redirect
+        if int(status) > 299 and int(status) < 400:
+            self._socket.close()
+            location = response_headers["location"]
+            if location.startswith("/"):
+                location = f"{self.scheme}://{self.host}/{location}"
+            url = URL(location)
+            return url.request()
 
         content_length = int(response_headers["content-length"])
         content = response.read(content_length)
