@@ -34,6 +34,8 @@ class URL:
             if self.scheme == "data":
                 self._parse_data_url(url)
 
+        self._socket = None
+
 
     def _parse_data_url(self, input_url: str) -> None:
         url_type, _ = input_url.split(",", 1)
@@ -71,26 +73,28 @@ class URL:
         elif self.scheme == "data":
             return self._request_data()
 
-        s = socket.socket(
-            family=socket.AF_INET,
-            type=socket.SOCK_STREAM,
-            proto=socket.IPPROTO_TCP
-        )
-        if self.scheme == "https":
-            ctx = ssl.create_default_context()
-            s = ctx.wrap_socket(s, server_hostname=self.host)
-        s.connect((self.host, self.port))
+        if self._socket is None:
+            self._socket = socket.socket(
+                family=socket.AF_INET,
+                type=socket.SOCK_STREAM,
+                proto=socket.IPPROTO_TCP
+            )
+            if self.scheme == "https":
+                ctx = ssl.create_default_context()
+                self._socket = ctx.wrap_socket(self._socket, server_hostname=self.host)
+
+            self._socket.connect((self.host, self.port))
 
         request =  f"GET {self.path} HTTP/1.1\r\n"
         request += f"Host: {self.host}\r\n"
-        request +=  "Connection: close\r\n"
+        # request +=  "Connection: close\r\n"
         request +=  "User-Agent: lccatala\r\n"
         for h, v in extra_headers:
             request +=  f"{h}: {v}\r\n"
         request +=  "\r\n"
-        s.send(request.encode("utf8"))
+        self._socket.send(request.encode("utf8"))
 
-        response = s.makefile("r", encoding="utf8", newline="\r\n")
+        response = self._socket.makefile("r", encoding="utf8", newline="\r\n")
         statusline = response.readline()
         version, status, explanation = statusline.split(" ", 2)
 
@@ -103,11 +107,12 @@ class URL:
             header, value = line.split(":", 1)
             response_headers[header.casefold()] = value.strip()
 
+
         assert "transfer-encoding" not in response_headers
         assert "content-encoding" not in response_headers
 
-        content = response.read()
-        s.close()
+        content_length = int(response_headers["content-length"])
+        content = response.read(content_length)
 
         return content
 
