@@ -5,9 +5,21 @@ import ssl
 
 class URL:
     def __init__(self, url: str) -> None:
+        self.scheme_prefix = ""
+        self.supported_schemes = [
+            "http", 
+            "view-source:http", 
+            "https", 
+            "view-source:https", 
+            "file", 
+            "view-source:file"
+        ]
         if "://" in url:
             self.scheme, url = url.split("://", 1)
-            assert self.scheme in ["http", "https", "file"]
+            assert self.scheme in self.supported_schemes
+
+            if ":" in self.scheme:
+                self.scheme_prefix, self.scheme = self.scheme.split(":", 1)
 
             if self.scheme == "http":
                 self.port = 80
